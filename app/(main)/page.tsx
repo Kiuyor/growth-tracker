@@ -3,22 +3,47 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ListTodo, Trophy } from "lucide-react";
+import { CheckCircle2, Flame, ListTodo, Trophy } from "lucide-react";
 import Link from "next/link";
+import { startOfDay, subDays } from "date-fns";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session.userId) redirect("/sign-in");
 
-  const [profile, totalTasks, pendingTasks, completedTasks] = await Promise.all([
-    prisma.userProfile.findUnique({ where: { clerkId: session.userId } }),
-    prisma.task.count({ where: { userId: session.userId } }),
-    prisma.task.count({ where: { userId: session.userId, status: { not: "DONE" } } }),
-    prisma.task.count({ where: { userId: session.userId, status: "DONE" } }),
+  const userId = session.userId;
+  const today = startOfDay(new Date());
+
+  const [
+    profile,
+    totalTasks,
+    pendingTasks,
+    completedTasks,
+    todayCheck,
+    yesterdayCheck,
+    totalCheckIns,
+  ] = await Promise.all([
+    prisma.userProfile.findUnique({ where: { clerkId: userId } }),
+    prisma.task.count({ where: { userId } }),
+    prisma.task.count({ where: { userId, status: { not: "DONE" } } }),
+    prisma.task.count({ where: { userId, status: "DONE" } }),
+    prisma.dailyCheck.findUnique({
+      where: { userId_date: { userId, date: today } },
+    }),
+    prisma.dailyCheck.findUnique({
+      where: { userId_date: { userId, date: subDays(today, 1) } },
+    }),
+    prisma.dailyCheck.count({ where: { userId } }),
   ]);
 
+  const streak = todayCheck
+    ? todayCheck.streak
+    : yesterdayCheck
+    ? yesterdayCheck.streak
+    : 0;
+
   const recentTasks = await prisma.task.findMany({
-    where: { userId: session.userId },
+    where: { userId },
     orderBy: { createdAt: "desc" },
     take: 5,
     include: { subtasks: true },
@@ -46,6 +71,25 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
+              连续打卡
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-2xl font-bold text-orange-600 dark:text-orange-400">
+              <Flame className="h-5 w-5" />
+              {streak} 天
+            </div>
+            <Link href="/checkin">
+              <Button variant="link" size="sm" className="h-auto px-0 py-0">
+                {todayCheck ? "查看详情" : "去打卡"}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               总任务
             </CardTitle>
           </CardHeader>
@@ -54,17 +98,6 @@ export default async function DashboardPage() {
               <ListTodo className="h-5 w-5" />
               {totalTasks}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              待完成
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingTasks}</div>
           </CardContent>
         </Card>
 

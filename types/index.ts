@@ -1,3 +1,11 @@
+export interface DailyCheck {
+  id: string;
+  userId: string;
+  date: string;
+  checked: boolean;
+  streak: number;
+}
+
 export interface Subtask {
   id: string;
   taskId: string;
