@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 用户（由 Clerk 管理，我们只存扩展资料）
+// ============================================
+model UserProfile {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique // Clerk user ID
+  totalPoints Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联
+  tasks       Task[]
+  pointLogs   PointLog[]
+  achievements UserAchievement[] // 预留：用户成就
+  dailyChecks DailyCheck[]      // 预留：每日打卡
+  moodEntries MoodEntry[]       // 预留：心情随记
+  pomodoros   Pomodoro[]        // 预留：番茄钟记录
+
+  @@map("user_profiles")
+}
+
+// ============================================
+// 任务系统
+// ============================================
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  priority    String   @default("MEDIUM") // HIGH, MEDIUM, LOW
+  status      String   @default("TODO")   // TODO, IN_PROGRESS, DONE
+  deadline    DateTime?
+  category    String?    // 分类标签，如"学习","运动","阅读"
+  points      Int        @default(0) // 完成奖励积分
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // 关联
+  user        UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  subtasks    Subtask[]
+
+  @@index([userId, status])
+  @@index([userId, priority])
+  @@map("tasks")
+}
+
+model Subtask {
+  id        String    @id @default(cuid())
+  taskId    String
+  title     String
+  completed Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("subtasks")
+}
+
+// ============================================
+// 积分系统（核心：可扩展的积分引擎）
+// ============================================
+model PointLog {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int         // 正数获得，负数消费
+  balance     Int         // 变动后的余额
+  source      String      // TASK_COMPLETE, DAILY_CHECK, POMODORO, ACHIEVEMENT, STREAK_BONUS, SHOP_SPEND, MANUAL_ADJUST
+  sourceId    String?     // 关联来源ID（如任务ID、成就ID）
+  description String      // 人类可读描述
+  createdAt   DateTime    @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("point_logs")
+}
+
+// ============================================
+// 预留：成就系统
+// ============================================
+model Achievement {
+  id          String   @id @default(cuid())
+  code        String   @unique // 成就代码，如"first_task"
+  name        String
+  description String
+  points      Int      // 达成奖励
+  icon        String?  // 图标标识
+  createdAt   DateTime @default(now())
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+
+  user          UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ============================================
+// 预留：每日打卡
+// ============================================
+model DailyCheck {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime // 只存日期
+  checked   Boolean  @default(true)
+  streak    Int      @default(0) // 连续天数
+
+  user      UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_checks")
+}
+
+// ============================================
+// 预留：心情随记
+// ============================================
+model MoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  moodScore Int      // 1-5 分
+  tags      String   // 心情标签，以逗号分隔（SQLite 不支持 String[]）
+  createdAt DateTime @default(now())
+
+  user      UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@map("mood_entries")
+}
+
+// ============================================
+// 预留：番茄钟记录
+// ============================================
+model Pomodoro {
+  id        String   @id @default(cuid())
+  userId    String
+  duration  Int      // 实际时长（分钟）
+  taskId    String?  // 关联任务（可选）
+  startedAt DateTime
+  endedAt   DateTime?
+
+  user      UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@map("pomodoros")
+}
