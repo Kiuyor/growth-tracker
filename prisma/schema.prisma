@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -120,7 +120,7 @@ model UserAchievement {
 model DailyCheck {
   id        String   @id @default(cuid())
   userId    String
-  date      DateTime // 只存日期
+  date      DateTime @db.Date // 只存日期
   checked   Boolean  @default(true)
   streak    Int      @default(0) // 连续天数
 
