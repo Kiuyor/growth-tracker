@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Coins,
+  ShoppingBag,
   Sun,
   Moon,
   Menu,
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "仪表盘", icon: LayoutDashboard },
   { href: "/tasks", label: "任务", icon: ListTodo },
+  { href: "/shop", label: "商店", icon: ShoppingBag },
   { href: "/points", label: "积分", icon: Coins },
 ];
 

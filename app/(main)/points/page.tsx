@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PointsMallSection } from "@/components/shop/points-mall-section";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 
@@ -45,6 +47,8 @@ export default async function PointsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PointsMallSection />
 
       <Card>
         <CardHeader>

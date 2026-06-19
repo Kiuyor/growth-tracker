@@ -20,6 +20,7 @@ model UserProfile {
   // 关联
   tasks       Task[]
   pointLogs   PointLog[]
+  userItems   UserItem[]      // 新增：积分商店库存
   achievements UserAchievement[] // 预留：用户成就
   dailyChecks DailyCheck[]      // 预留：每日打卡
   moodEntries MoodEntry[]       // 预留：心情随记
@@ -82,6 +83,55 @@ model PointLog {
 
   @@index([userId, createdAt])
   @@map("point_logs")
+}
+
+// ============================================
+// 积分商店
+// ============================================
+model ShopItem {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?  // Lucide 图标名或 emoji
+  type        String   @default("REWARD") // REWARD(自定义奖励), DECORATION(虚拟装扮), CONSUMABLE(消耗品)
+  cost        Int      // 所需积分
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  limitConfig String?  // JSON: { "period": "WEEKLY"|"MONTHLY"|"TOTAL", "maxCount": number }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userItems   UserItem[]
+
+  @@map("shop_items")
+}
+
+model UserItem {
+  id          String   @id @default(cuid())
+  userId      String
+  shopItemId  String
+  status      String   @default("UNUSED") // UNUSED(待使用), USED(已使用), EXPIRED(已过期)
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+  shopItem    ShopItem    @relation(fields: [shopItemId], references: [id], onDelete: Cascade)
+  useLogs     InventoryUseLog[]
+
+  @@index([userId, status])
+  @@index([userId, shopItemId])
+  @@map("user_items")
+}
+
+model InventoryUseLog {
+  id          String   @id @default(cuid())
+  userItemId  String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  userItem    UserItem @relation(fields: [userItemId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_use_logs")
 }
 
 // ============================================

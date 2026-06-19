@@ -21,13 +21,34 @@ export interface Task {
   subtasks: Subtask[];
 }
 
-export interface PointLog {
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  type: string;
+  cost: number;
+  sortOrder: number;
+  isActive: boolean;
+  limitConfig: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserItem {
   id: string;
   userId: string;
-  amount: number;
-  balance: number;
-  source: string;
-  sourceId: string | null;
-  description: string;
+  shopItemId: string;
+  status: string;
+  usedAt: string | null;
+  createdAt: string;
+  shopItem: ShopItem;
+  useLogs: InventoryUseLog[];
+}
+
+export interface InventoryUseLog {
+  id: string;
+  userItemId: string;
+  note: string | null;
   createdAt: string;
 }
