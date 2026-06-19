@@ -90,7 +90,7 @@ model PointLog {
 // ============================================
 model ShopItem {
   id          String   @id @default(cuid())
-  name        String   @unique
+  name        String
   description String?
   icon        String?  // Lucide 图标名或 emoji
   type        String   @default("REWARD") // REWARD(自定义奖励), DECORATION(虚拟装扮), CONSUMABLE(消耗品)

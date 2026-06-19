@@ -61,10 +61,8 @@ async function main() {
   ];
 
   for (const item of items) {
-    await prisma.shopItem.upsert({
-      where: { name: item.name },
-      update: item,
-      create: item,
+    await prisma.shopItem.create({
+      data: item,
     });
   }
 
