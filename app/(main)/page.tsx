@@ -3,9 +3,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Flame, ListTodo, Trophy } from "lucide-react";
+import {
+  CheckCircle2,
+  Flame,
+  ListTodo,
+  Trophy,
+  Timer,
+} from "lucide-react";
 import Link from "next/link";
-import { startOfDay, subDays } from "date-fns";
+import { startOfDay, subDays, startOfWeek, endOfWeek } from "date-fns";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -13,6 +19,8 @@ export default async function DashboardPage() {
 
   const userId = session.userId;
   const today = startOfDay(new Date());
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
 
   const [
     profile,
@@ -22,6 +30,8 @@ export default async function DashboardPage() {
     todayCheck,
     yesterdayCheck,
     totalCheckIns,
+    todayPomodoroCount,
+    todayPomodoroMinutes,
   ] = await Promise.all([
     prisma.userProfile.findUnique({ where: { clerkId: userId } }),
     prisma.task.count({ where: { userId } }),
@@ -34,6 +44,21 @@ export default async function DashboardPage() {
       where: { userId_date: { userId, date: subDays(today, 1) } },
     }),
     prisma.dailyCheck.count({ where: { userId } }),
+    prisma.pomodoro.count({
+      where: {
+        userId,
+        startedAt: { gte: today },
+        endedAt: { not: null },
+      },
+    }),
+    prisma.pomodoro.aggregate({
+      where: {
+        userId,
+        startedAt: { gte: today },
+        endedAt: { not: null },
+      },
+      _sum: { duration: true },
+    }),
   ]);
 
   const streak = todayCheck
@@ -112,6 +137,25 @@ export default async function DashboardPage() {
               <CheckCircle2 className="h-5 w-5" />
               {completedTasks}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              今日专注
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <Timer className="h-5 w-5" />
+              {todayPomodoroCount} 次 / {todayPomodoroMinutes._sum.duration || 0} 分钟
+            </div>
+            <Link href="/pomodoro">
+              <Button variant="link" size="sm" className="h-auto px-0 py-0">
+                去专注
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

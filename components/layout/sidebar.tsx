@@ -13,6 +13,7 @@ import {
   Moon,
   Menu,
   X,
+  Timer,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "仪表盘", icon: LayoutDashboard },
   { href: "/tasks", label: "任务", icon: ListTodo },
+  { href: "/pomodoro", label: "番茄钟", icon: Timer },
   { href: "/checkin", label: "打卡", icon: Flame },
   { href: "/shop", label: "商店", icon: ShoppingBag },
   { href: "/points", label: "积分", icon: Coins },

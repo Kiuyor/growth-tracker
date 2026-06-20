@@ -60,3 +60,24 @@ export interface InventoryUseLog {
   note: string | null;
   createdAt: string;
 }
+
+export interface Pomodoro {
+  id: string;
+  userId: string;
+  duration: number;
+  taskId: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  taskTitle?: string | null;
+  points?: number;
+}
+
+export interface PomodoroStats {
+  todayMinutes: number;
+  todayCount: number;
+  weekMinutes: number;
+  totalCount: number;
+}
+
+export type TimerMode = "COUNTDOWN" | "STOPWATCH";
+export type TimerState = "idle" | "running" | "paused";
