@@ -13,6 +13,37 @@ import {
 import { zhCN } from "date-fns/locale";
 import type { ReportStats, DailyStat } from "@/types";
 
+export function generateShareQuote(data: ReportStats): string {
+  const { summary, streak, type } = data;
+  const period = type === "weekly" ? "周" : "月";
+
+  const templates = [
+    {
+      condition: () => summary.tasksCompleted > 0 && summary.pomodoroMinutes > 0,
+      text: `本${period}专注了 ${summary.pomodoroMinutes} 分钟，完成了 ${summary.tasksCompleted} 个任务，继续保持！`,
+    },
+    {
+      condition: () => streak.change > 0,
+      text: `连续打卡天数提升了 ${streak.change} 天，坚持就是胜利！`,
+    },
+    {
+      condition: () => summary.moodAverage !== null && summary.moodAverage >= 4,
+      text: `心情保持不错，本${period}平均分 ${summary.moodAverage} 分，继续加油！`,
+    },
+    {
+      condition: () => summary.pomodoroMinutes > 0,
+      text: `本${period}专注了 ${summary.pomodoroMinutes} 分钟，每一步都算数。`,
+    },
+    {
+      condition: () => summary.tasksCompleted > 0,
+      text: `完成了 ${summary.tasksCompleted} 个任务，新${period}继续向前！`,
+    },
+  ];
+
+  const matched = templates.find((t) => t.condition());
+  return matched ? matched.text : `新${period}的开始，从专注一件事做起。`;
+}
+
 function getPeriod(
   type: "weekly" | "monthly",
   offset: number,

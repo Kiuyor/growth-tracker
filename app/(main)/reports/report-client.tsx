@@ -23,7 +23,10 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Share2,
 } from "lucide-react";
+
+import { ShareDialog } from "@/components/reports/share-dialog";
 
 interface ReportClientProps {
   type: "weekly" | "monthly";
@@ -98,6 +101,7 @@ export function ReportClient({ type, initialData }: ReportClientProps) {
   const [data, setData] = useState<ReportStats>(initialData);
   const [offset, setOffset] = useState(parseInt(searchParams.get("offset") || "0", 10) || 0);
   const [loading, setLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const labelSet = labels[type];
 
@@ -184,6 +188,10 @@ export function ReportClient({ type, initialData }: ReportClientProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+            <Share2 className="mr-1 h-4 w-4" />
+            生成分享图
+          </Button>
           <Button variant="outline" size="sm" onClick={handlePrev}>
             <ChevronLeft className="mr-1 h-4 w-4" />
             {labelSet.prev}
@@ -306,6 +314,7 @@ export function ReportClient({ type, initialData }: ReportClientProps) {
           <StreakChart data={streakData} />
         </div>
       </div>
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} data={data} />
     </div>
   );
 }
