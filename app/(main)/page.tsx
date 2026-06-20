@@ -164,145 +164,146 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">仪表盘</h2>
+    <div className="flex h-full flex-col gap-3 md:gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold md:text-2xl">仪表盘</h2>
+        <Link href="/stats">
+          <Button variant="outline" size="sm">查看完整统计</Button>
+        </Link>
+      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               总积分
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
-              <Trophy className="h-5 w-5" />
+          <CardContent className="p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold text-amber-600 dark:text-amber-400">
+              <Trophy className="h-4 w-4" />
               {profile?.totalPoints || 0}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               连续打卡
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-2xl font-bold text-orange-600 dark:text-orange-400">
-              <Flame className="h-5 w-5" />
+          <CardContent className="flex items-center justify-between p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold text-orange-600 dark:text-orange-400">
+              <Flame className="h-4 w-4" />
               {streak} 天
             </div>
             <Link href="/checkin">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0">
-                {todayCheck ? "查看详情" : "去打卡"}
+              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
+                {todayCheck ? "查看" : "打卡"}
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               总任务
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-2xl font-bold">
-              <ListTodo className="h-5 w-5" />
+          <CardContent className="p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold">
+              <ListTodo className="h-4 w-4" />
               {totalTasks}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               已完成
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-2xl font-bold text-green-600 dark:text-green-400">
-              <CheckCircle2 className="h-5 w-5" />
+          <CardContent className="p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold text-green-600 dark:text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
               {completedTasks}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               今日专注
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
-              <Timer className="h-5 w-5" />
-              {todayPomodoroCount} 次 / {todayPomodoroMinutes._sum.duration || 0} 分钟
+          <CardContent className="flex items-center justify-between p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold text-blue-600 dark:text-blue-400">
+              <Timer className="h-4 w-4" />
+              {todayPomodoroCount} / {todayPomodoroMinutes._sum.duration || 0}m
             </div>
             <Link href="/pomodoro">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0">
-                去专注
+              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
+                专注
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="h-[72px]">
+          <CardHeader className="p-3 pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">
               今日心情
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-2xl font-bold text-pink-600 dark:text-pink-400">
-              <Smile className="h-5 w-5" />
+          <CardContent className="flex items-center justify-between p-3 pt-0">
+            <div className="flex items-center gap-2 text-lg font-bold text-pink-600 dark:text-pink-400">
+              <Smile className="h-4 w-4" />
               {todayMood ? `${todayMood.moodScore}/5` : "未记录"}
             </div>
             <Link href="/mood">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0">
-                {todayMood ? "查看详情" : "去记录"}
+              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
+                {todayMood ? "查看" : "记录"}
               </Button>
             </Link>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
+        <div className="min-h-0 lg:col-span-2">
           <WeeklyTrendChart data={weeklyDaily} />
         </div>
-        <TaskStatusPie
-          todo={taskStatusCounts.TODO}
-          inProgress={taskStatusCounts.IN_PROGRESS}
-          completed={taskStatusCounts.DONE}
-        />
+        <div className="min-h-0">
+          <TaskStatusPie
+            todo={taskStatusCounts.TODO}
+            inProgress={taskStatusCounts.IN_PROGRESS}
+            completed={taskStatusCounts.DONE}
+          />
+        </div>
       </div>
 
-      <div className="flex justify-end">
-        <Link href="/stats">
-          <Button variant="outline">查看完整统计</Button>
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader>
+      <Card className="flex shrink-0 flex-col overflow-hidden md:h-[200px]">
+        <CardHeader className="shrink-0 p-3 pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle>最近任务</CardTitle>
+            <CardTitle className="text-sm md:text-base">最近任务</CardTitle>
             <Link href="/tasks">
-              <Button variant="outline" size="sm">查看全部</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs">查看全部</Button>
             </Link>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-h-0 flex-1 overflow-y-auto p-3 pt-0 scrollbar-thin">
           {recentTasks.length === 0 ? (
-            <p className="text-muted-foreground">还没有任务，去创建一个吧！</p>
+            <p className="text-sm text-muted-foreground">还没有任务，去创建一个吧！</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {recentTasks.map((task) => (
                 <li
                   key={task.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
+                  className="flex items-center justify-between rounded-lg border p-2 md:p-3"
                 >
                   <div className="flex items-center gap-2">
                     <span
@@ -310,11 +311,11 @@ export default async function DashboardPage() {
                         task.status === "DONE" ? "bg-green-500" : "bg-amber-500"
                       }`}
                     />
-                    <span className={task.status === "DONE" ? "line-through" : ""}>
+                    <span className={`text-sm ${task.status === "DONE" ? "line-through" : ""}`}>
                       {task.title}
                     </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs text-muted-foreground md:text-sm">
                     {task.status === "DONE" ? "已完成" : "待完成"}
                   </span>
                 </li>

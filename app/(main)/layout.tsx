@@ -28,7 +28,7 @@ export default async function MainLayout({
         <Sidebar />
         <div className="flex flex-1 flex-col">
           <Topbar points={profile.totalPoints} />
-          <main className="flex-1 p-4 md:p-6">{children}</main>
+          <main className="flex-1 overflow-hidden p-4 md:p-6">{children}</main>
         </div>
       </div>
     </div>
