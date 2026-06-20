@@ -274,10 +274,10 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
-        <div className="min-h-0 lg:col-span-2">
+        <div className="h-full min-h-0 lg:col-span-2">
           <WeeklyTrendChart data={weeklyDaily} />
         </div>
-        <div className="min-h-0">
+        <div className="h-full min-h-0">
           <TaskStatusPie
             todo={taskStatusCounts.TODO}
             inProgress={taskStatusCounts.IN_PROGRESS}

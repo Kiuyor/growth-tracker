@@ -39,32 +39,34 @@ export function TaskStatusPie({ todo, inProgress, completed }: TaskStatusPieProp
 
   return (
     <ChartCard title="任务状态分布" empty={total === 0} className="h-full w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={80}
-            paddingAngle={4}
-            dataKey="value"
-          >
-            {data.map((entry) => (
-              <Cell key={entry.key} fill={COLORS[entry.key]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value) => [`${value} 个`, "数量"]}
-            contentStyle={{
-              borderRadius: "8px",
-              border: "none",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="h-full min-h-[200px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={80}
+              paddingAngle={4}
+              dataKey="value"
+            >
+              {data.map((entry) => (
+                <Cell key={entry.key} fill={COLORS[entry.key]} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value) => [`${value} 个`, "数量"]}
+              contentStyle={{
+                borderRadius: "8px",
+                border: "none",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </ChartCard>
   );
 }
