@@ -106,6 +106,7 @@ export interface DailyStat {
   moodScore: number | null;
   tasksCompleted: number;
   pointsEarned: number;
+  streak?: number;
 }
 
 export interface OverviewStats {
@@ -128,3 +129,44 @@ export interface HeatmapData {
 }
 
 export type TimeRange = "7" | "30";
+
+export interface ReportPeriod {
+  start: string;
+  end: string;
+  label: string;
+}
+
+export interface ReportHighlights {
+  mostFocusDay: { date: string; minutes: number } | null;
+  mostTasksDay: { date: string; count: number } | null;
+  bestMoodDay: { date: string; score: number } | null;
+}
+
+export interface ReportStats {
+  type: "weekly" | "monthly";
+  current: ReportPeriod;
+  previous: ReportPeriod;
+  summary: {
+    pomodoroMinutes: number;
+    pomodoroCount: number;
+    tasksCompleted: number;
+    checkInDays: number;
+    moodAverage: number | null;
+    pointsEarned: number;
+  };
+  comparison: {
+    pomodoroMinutes: number;
+    pomodoroCount: number;
+    tasksCompleted: number;
+    checkInDays: number;
+    moodAverage: number | null;
+    pointsEarned: number;
+  };
+  streak: {
+    start: number;
+    end: number;
+    change: number;
+  };
+  highlights: ReportHighlights;
+  daily: DailyStat[];
+}

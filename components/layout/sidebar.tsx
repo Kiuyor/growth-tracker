@@ -16,6 +16,7 @@ import {
   Timer,
   Smile,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/checkin", label: "打卡", icon: Flame },
   { href: "/mood", label: "心情", icon: Smile },
   { href: "/stats", label: "统计", icon: BarChart3 },
+  { href: "/reports/weekly", label: "报告", icon: FileText },
   { href: "/shop", label: "商店", icon: ShoppingBag },
   { href: "/points", label: "积分", icon: Coins },
 ];
@@ -45,7 +47,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 p-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.href;
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
@@ -105,7 +107,7 @@ export function MobileNav() {
           <nav className="space-y-1 p-4">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
