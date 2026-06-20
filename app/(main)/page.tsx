@@ -9,6 +9,7 @@ import {
   ListTodo,
   Trophy,
   Timer,
+  Smile,
 } from "lucide-react";
 import Link from "next/link";
 import { startOfDay, subDays, startOfWeek, endOfWeek } from "date-fns";
@@ -32,6 +33,7 @@ export default async function DashboardPage() {
     totalCheckIns,
     todayPomodoroCount,
     todayPomodoroMinutes,
+    todayMood,
   ] = await Promise.all([
     prisma.userProfile.findUnique({ where: { clerkId: userId } }),
     prisma.task.count({ where: { userId } }),
@@ -58,6 +60,10 @@ export default async function DashboardPage() {
         endedAt: { not: null },
       },
       _sum: { duration: true },
+    }),
+    prisma.moodEntry.findFirst({
+      where: { userId, createdAt: { gte: today } },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -154,6 +160,25 @@ export default async function DashboardPage() {
             <Link href="/pomodoro">
               <Button variant="link" size="sm" className="h-auto px-0 py-0">
                 去专注
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              今日心情
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-2xl font-bold text-pink-600 dark:text-pink-400">
+              <Smile className="h-5 w-5" />
+              {todayMood ? `${todayMood.moodScore}/5` : "未记录"}
+            </div>
+            <Link href="/mood">
+              <Button variant="link" size="sm" className="h-auto px-0 py-0">
+                {todayMood ? "查看详情" : "去记录"}
               </Button>
             </Link>
           </CardContent>

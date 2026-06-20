@@ -81,3 +81,19 @@ export interface PomodoroStats {
 
 export type TimerMode = "COUNTDOWN" | "STOPWATCH";
 export type TimerState = "idle" | "running" | "paused";
+
+export interface MoodEntry {
+  id: string;
+  userId: string;
+  content: string;
+  moodScore: number;
+  tags: string;
+  createdAt: string;
+}
+
+export interface MoodStats {
+  totalEntries: number;
+  currentStreak: number;
+  averageMood: number;
+  todayRecorded: boolean;
+}

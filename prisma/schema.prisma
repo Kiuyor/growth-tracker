@@ -189,11 +189,12 @@ model MoodEntry {
   userId    String
   content   String
   moodScore Int      // 1-5 分
-  tags      String   // 心情标签，以逗号分隔（SQLite 不支持 String[]）
+  tags      String   // 心情标签，以逗号分隔
   createdAt DateTime @default(now())
 
   user      UserProfile @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@map("mood_entries")
 }
 

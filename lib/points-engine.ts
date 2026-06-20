@@ -7,7 +7,9 @@ export type PointSource =
   | "ACHIEVEMENT"
   | "STREAK_BONUS"
   | "SHOP_SPEND"
-  | "MANUAL_ADJUST";
+  | "MANUAL_ADJUST"
+  | "MOOD_ENTRY"
+  | "MOOD_STREAK";
 
 interface AddPointsParams {
   userId: string;

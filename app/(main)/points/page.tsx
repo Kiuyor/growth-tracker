@@ -29,6 +29,8 @@ export default async function PointsPage() {
     STREAK_BONUS: "连续打卡奖励",
     SHOP_SPEND: "商店消费",
     MANUAL_ADJUST: "手动调整",
+    MOOD_ENTRY: "心情随记",
+    MOOD_STREAK: "心情连续记录",
   };
 
   return (
