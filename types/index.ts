@@ -97,3 +97,34 @@ export interface MoodStats {
   averageMood: number;
   todayRecorded: boolean;
 }
+
+export interface DailyStat {
+  date: string;
+  checkIn: boolean;
+  pomodoroCount: number;
+  pomodoroMinutes: number;
+  moodScore: number | null;
+  tasksCompleted: number;
+  pointsEarned: number;
+}
+
+export interface OverviewStats {
+  daily: DailyStat[];
+  tasks: {
+    total: number;
+    completed: number;
+    inProgress: number;
+    todo: number;
+    byPriority: { priority: string; count: number }[];
+    byCategory: { category: string; count: number }[];
+  };
+  pointsBySource: { source: string; amount: number }[];
+  pomodoroByHour: { hour: number; count: number }[];
+}
+
+export interface HeatmapData {
+  year: number;
+  data: { date: string; value: number; streak: number }[];
+}
+
+export type TimeRange = "7" | "30";

@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { startOfDay, subDays, startOfWeek, endOfWeek } from "date-fns";
+import { WeeklyTrendChart } from "@/components/charts/weekly-trend-chart";
+import { TaskStatusPie } from "@/components/charts/task-status-pie";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -34,6 +36,9 @@ export default async function DashboardPage() {
     todayPomodoroCount,
     todayPomodoroMinutes,
     todayMood,
+    weeklyPomodoros,
+    weeklyMoods,
+    allTasks,
   ] = await Promise.all([
     prisma.userProfile.findUnique({ where: { clerkId: userId } }),
     prisma.task.count({ where: { userId } }),
@@ -65,6 +70,22 @@ export default async function DashboardPage() {
       where: { userId, createdAt: { gte: today } },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.pomodoro.findMany({
+      where: {
+        userId,
+        startedAt: { gte: subDays(today, 6) },
+        endedAt: { not: null },
+      },
+      select: { startedAt: true, duration: true },
+    }),
+    prisma.moodEntry.findMany({
+      where: { userId, createdAt: { gte: subDays(today, 6) } },
+      select: { createdAt: true, moodScore: true },
+    }),
+    prisma.task.findMany({
+      where: { userId },
+      select: { status: true },
+    }),
   ]);
 
   const streak = todayCheck
@@ -72,6 +93,68 @@ export default async function DashboardPage() {
     : yesterdayCheck
     ? yesterdayCheck.streak
     : 0;
+
+  // 构建近 7 天每日数据
+  const dailyMap = new Map<
+    string,
+    {
+      checkIn: boolean;
+      pomodoroCount: number;
+      pomodoroMinutes: number;
+      moodScores: number[];
+      tasksCompleted: number;
+      pointsEarned: number;
+    }
+  >();
+
+  for (let i = 0; i < 7; i++) {
+    const d = subDays(today, 6 - i);
+    dailyMap.set(d.toISOString().split("T")[0], {
+      checkIn: false,
+      pomodoroCount: 0,
+      pomodoroMinutes: 0,
+      moodScores: [],
+      tasksCompleted: 0,
+      pointsEarned: 0,
+    });
+  }
+
+  weeklyPomodoros.forEach((p) => {
+    const key = p.startedAt.toISOString().split("T")[0];
+    const day = dailyMap.get(key);
+    if (day) {
+      day.pomodoroCount += 1;
+      day.pomodoroMinutes += p.duration;
+    }
+  });
+
+  weeklyMoods.forEach((e) => {
+    const key = e.createdAt.toISOString().split("T")[0];
+    const day = dailyMap.get(key);
+    if (day) day.moodScores.push(e.moodScore);
+  });
+
+  const weeklyDaily = Array.from(dailyMap.entries()).map(([date, val]) => ({
+    date,
+    checkIn: val.checkIn,
+    pomodoroCount: val.pomodoroCount,
+    pomodoroMinutes: val.pomodoroMinutes,
+    moodScore:
+      val.moodScores.length > 0
+        ? Number(
+            (val.moodScores.reduce((a, b) => a + b, 0) / val.moodScores.length).toFixed(1)
+          )
+        : null,
+    tasksCompleted: val.tasksCompleted,
+    pointsEarned: val.pointsEarned,
+  }));
+
+  const taskStatusCounts = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+  allTasks.forEach((t) => {
+    if (t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "DONE") {
+      taskStatusCounts[t.status] += 1;
+    }
+  });
 
   const recentTasks = await prisma.task.findMany({
     where: { userId },
@@ -183,6 +266,23 @@ export default async function DashboardPage() {
             </Link>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <WeeklyTrendChart data={weeklyDaily} />
+        </div>
+        <TaskStatusPie
+          todo={taskStatusCounts.TODO}
+          inProgress={taskStatusCounts.IN_PROGRESS}
+          completed={taskStatusCounts.DONE}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <Link href="/stats">
+          <Button variant="outline">查看完整统计</Button>
+        </Link>
       </div>
 
       <Card>

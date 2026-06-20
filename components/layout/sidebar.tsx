@@ -15,6 +15,7 @@ import {
   X,
   Timer,
   Smile,
+  BarChart3,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/pomodoro", label: "番茄钟", icon: Timer },
   { href: "/checkin", label: "打卡", icon: Flame },
   { href: "/mood", label: "心情", icon: Smile },
+  { href: "/stats", label: "统计", icon: BarChart3 },
   { href: "/shop", label: "商店", icon: ShoppingBag },
   { href: "/points", label: "积分", icon: Coins },
 ];
