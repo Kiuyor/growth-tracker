@@ -31,7 +31,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
   }));
 
   return (
-    <ChartCard title="学习心情趋势" empty={!hasData} className="h-full">
+    <ChartCard title="学习心情趋势" empty={!hasData} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={formatted} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

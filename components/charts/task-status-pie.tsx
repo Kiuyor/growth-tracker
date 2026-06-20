@@ -38,7 +38,7 @@ export function TaskStatusPie({ todo, inProgress, completed }: TaskStatusPieProp
   const total = todo + inProgress + completed;
 
   return (
-    <ChartCard title="任务状态分布" empty={total === 0} className="h-full">
+    <ChartCard title="任务状态分布" empty={total === 0} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

@@ -24,8 +24,8 @@ export function ChartCard({
   className,
 }: ChartCardProps) {
   return (
-    <Card className={cn("flex flex-col", className)}>
-      <CardHeader className="pb-2">
+    <Card className={cn("flex h-full flex-col", className)}>
+      <CardHeader className="shrink-0 pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="min-h-0 flex-1">
@@ -34,7 +34,7 @@ export function ChartCard({
             {emptyText}
           </div>
         ) : (
-          children
+          <div className="h-full w-full">{children}</div>
         )}
       </CardContent>
     </Card>
