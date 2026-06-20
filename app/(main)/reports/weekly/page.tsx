@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { buildReportStats } from "@/lib/reports";
 import { ReportClient } from "../report-client";
-import type { ReportStats } from "@/types";
 
 export default async function WeeklyReportPage({
   searchParams,
@@ -14,20 +14,6 @@ export default async function WeeklyReportPage({
   const { offset } = await searchParams;
   const safeOffset = parseInt(offset || "0", 10) || 0;
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reports?type=weekly&offset=${safeOffset}`,
-    {
-      headers: {
-        cookie: "",
-      },
-    }
-  );
-
-  if (!res.ok) {
-    redirect("/");
-  }
-
-  const data = (await res.json()) as ReportStats;
-
+  const data = await buildReportStats(session.userId, "weekly", safeOffset);
   return <ReportClient type="weekly" initialData={data} />;
 }
