@@ -33,7 +33,7 @@ test.describe("任务 CRUD", () => {
     await expect(page.getByText("E2E 测试任务")).toBeVisible();
 
     // 通过 API 获取 id 用于后续清理
-    const res = await request.get("/api/tasks?status=TODO");
+    const res = await page.request.get("/api/tasks?status=TODO");
     const tasks = (await res.json()) as { id: string; title: string }[];
     const created = tasks.find((t) => t.title === "E2E 测试任务");
     if (created) taskId = created.id;
