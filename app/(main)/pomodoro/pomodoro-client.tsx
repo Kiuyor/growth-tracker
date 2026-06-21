@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useTimer } from "@/hooks/use-timer";
 import { usePomodoro } from "@/hooks/use-pomodoro";
 import { TimerDisplay } from "@/components/pomodoro/timer-display";
@@ -12,6 +13,16 @@ import { PomodoroHistory } from "@/components/pomodoro/pomodoro-history";
 import { PomodoroStats as PomodoroStatsCards } from "@/components/pomodoro/pomodoro-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { calcPomodoroPoints, getPomodoroTierLabel } from "@/lib/pomodoro-rules";
 import type { Pomodoro, PomodoroStats, Task, TimerMode } from "@/types";
 
@@ -31,6 +42,7 @@ export function PomodoroClient({
   const [taskId, setTaskId] = useState<string | null>(null);
   const [completeTask, setCompleteTask] = useState(false);
   const [started, setStarted] = useState(false);
+  const [confirmAbort, setConfirmAbort] = useState(false);
 
   const { activeId, history, stats, loading, start, complete, abort, refresh } =
     usePomodoro();
@@ -66,13 +78,13 @@ export function PomodoroClient({
       actualMinutes,
       completeTask,
     });
-    const points = result.points + (completeTask && taskId ? 0 : 0);
+    const points = result.points;
     const totalPoints =
       points +
       (result.taskCompleted
         ? initialTasks.find((t) => t.id === taskId)?.points || 0
         : 0);
-    window.alert(
+    toast.success(
       `专注结束！实际专注 ${actualMinutes} 分钟，${
         totalPoints > 0 ? `获得 ${totalPoints} 积分` : "未达到最低积分时长"
       }${result.taskCompleted ? "，关联任务已标记为完成" : ""}`
@@ -89,8 +101,13 @@ export function PomodoroClient({
       setStarted(false);
       return;
     }
-    if (!window.confirm("确定要放弃这次专注吗？放弃后不会获得积分。")) return;
+    setConfirmAbort(true);
+  };
+
+  const doAbort = async () => {
+    if (!activeId) return;
     await abort(activeId);
+    setConfirmAbort(false);
     setStarted(false);
     timer.reset(mode === "COUNTDOWN" ? duration * 60 : 0);
     await refresh();
@@ -188,6 +205,21 @@ export function PomodoroClient({
       </Card>
 
       <PomodoroHistory history={history.length > 0 ? history : initialHistory} />
+
+      <AlertDialog open={confirmAbort} onOpenChange={setConfirmAbort}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>放弃专注</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要放弃这次专注吗？放弃后不会获得积分。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>继续专注</AlertDialogCancel>
+            <AlertDialogAction onClick={doAbort}>放弃</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

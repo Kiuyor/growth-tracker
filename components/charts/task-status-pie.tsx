@@ -8,6 +8,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { STATUS_LABEL } from "@/lib/labels";
+import type { TaskStatus } from "@/types";
 import { ChartCard } from "./chart-card";
 
 interface TaskStatusPieProps {
@@ -16,23 +18,18 @@ interface TaskStatusPieProps {
   completed: number;
 }
 
-const COLORS: Record<string, string> = {
+const COLORS: Record<TaskStatus, string> = {
   TODO: "hsl(var(--muted-foreground))",
   IN_PROGRESS: "hsl(var(--primary))",
-  DONE: "hsl(142, 76%, 36%)",
-};
-
-const LABELS: Record<string, string> = {
-  TODO: "待办",
-  IN_PROGRESS: "进行中",
-  DONE: "已完成",
+  DONE: "hsl(var(--chart-2))",
+  ARCHIVED: "hsl(var(--muted))",
 };
 
 export function TaskStatusPie({ todo, inProgress, completed }: TaskStatusPieProps) {
   const data = [
-    { name: LABELS.TODO, value: todo, key: "TODO" },
-    { name: LABELS.IN_PROGRESS, value: inProgress, key: "IN_PROGRESS" },
-    { name: LABELS.DONE, value: completed, key: "DONE" },
+    { name: STATUS_LABEL.TODO, value: todo, key: "TODO" as TaskStatus },
+    { name: STATUS_LABEL.IN_PROGRESS, value: inProgress, key: "IN_PROGRESS" as TaskStatus },
+    { name: STATUS_LABEL.DONE, value: completed, key: "DONE" as TaskStatus },
   ].filter((d) => d.value > 0);
 
   const total = todo + inProgress + completed;

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { DEFAULT_POMODORO_SECONDS } from "@/lib/constants";
 
 interface TimerDisplayProps {
   remainingSeconds: number;
@@ -20,7 +21,7 @@ export function TimerDisplay({
   const progress =
     mode === "COUNTDOWN" && totalSeconds > 0
       ? remainingSeconds / totalSeconds
-      : Math.min(remainingSeconds / (25 * 60), 1);
+      : Math.min(remainingSeconds / DEFAULT_POMODORO_SECONDS, 1);
 
   const radius = 120;
   const stroke = 10;

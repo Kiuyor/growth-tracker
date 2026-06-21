@@ -2,8 +2,15 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { MoodClient } from "./mood-client";
-import { getMoodStreak, hasMoodEntryToday } from "@/lib/mood-rules";
+import { getMoodStreak, hasMoodEntryToday, tagsToArray } from "@/lib/mood-rules";
 import { subDays } from "date-fns";
+import type { MoodEntry } from "@/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "心情记录 | 成长追踪",
+  description: "记录每日心情，追踪情绪变化趋势",
+};
 
 export default async function MoodPage() {
   const session = await auth();
@@ -42,12 +49,15 @@ export default async function MoodPage() {
         )
       : 0;
 
+  const initialEntries: MoodEntry[] = entries.map((e) => ({
+    ...e,
+    tags: tagsToArray(e.tags),
+    createdAt: e.createdAt.toISOString(),
+  }));
+
   return (
     <MoodClient
-      initialEntries={entries.map((e) => ({
-        ...e,
-        createdAt: e.createdAt.toISOString(),
-      }))}
+      initialEntries={initialEntries}
       initialStats={{
         totalEntries,
         currentStreak,

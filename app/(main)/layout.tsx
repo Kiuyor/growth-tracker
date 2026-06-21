@@ -15,11 +15,17 @@ export default async function MainLayout({
     redirect("/sign-in");
   }
 
-  const profile = await prisma.userProfile.upsert({
+  let profile = await prisma.userProfile.findUnique({
     where: { clerkId: session.userId },
-    update: {},
-    create: { clerkId: session.userId },
+    select: { totalPoints: true },
   });
+
+  if (!profile) {
+    profile = await prisma.userProfile.create({
+      data: { clerkId: session.userId },
+      select: { totalPoints: true },
+    });
+  }
 
   return (
     <div className="min-h-screen bg-background">

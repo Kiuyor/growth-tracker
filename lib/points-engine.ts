@@ -1,22 +1,53 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { DEFAULT_POINT_LOG_LIMIT } from "./constants";
+import type { PointSource } from "@/types";
 
-export type PointSource =
-  | "TASK_COMPLETE"
-  | "DAILY_CHECK"
-  | "POMODORO"
-  | "ACHIEVEMENT"
-  | "STREAK_BONUS"
-  | "SHOP_SPEND"
-  | "MANUAL_ADJUST"
-  | "MOOD_ENTRY"
-  | "MOOD_STREAK";
-
+export type { PointSource };
 interface AddPointsParams {
   userId: string;
   amount: number;
   source: PointSource;
   sourceId?: string;
   description: string;
+  tx?: Prisma.TransactionClient;
+}
+
+async function addPointsInner(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  amount: number,
+  source: PointSource,
+  sourceId: string | undefined,
+  description: string
+) {
+  const user = await tx.userProfile.findUnique({
+    where: { clerkId: userId },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const newBalance = user.totalPoints + amount;
+
+  await tx.userProfile.update({
+    where: { clerkId: userId },
+    data: { totalPoints: newBalance },
+  });
+
+  const log = await tx.pointLog.create({
+    data: {
+      userId,
+      amount,
+      balance: newBalance,
+      source,
+      sourceId,
+      description,
+    },
+  });
+
+  return { balance: newBalance, log };
 }
 
 export async function addPoints({
@@ -25,35 +56,14 @@ export async function addPoints({
   source,
   sourceId,
   description,
+  tx,
 }: AddPointsParams) {
-  return prisma.$transaction(async (tx) => {
-    const user = await tx.userProfile.findUnique({
-      where: { clerkId: userId },
-    });
+  if (tx) {
+    return addPointsInner(tx, userId, amount, source, sourceId, description);
+  }
 
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const newBalance = user.totalPoints + amount;
-
-    await tx.userProfile.update({
-      where: { clerkId: userId },
-      data: { totalPoints: newBalance },
-    });
-
-    const log = await tx.pointLog.create({
-      data: {
-        userId,
-        amount,
-        balance: newBalance,
-        source,
-        sourceId,
-        description,
-      },
-    });
-
-    return { balance: newBalance, log };
+  return prisma.$transaction(async (innerTx) => {
+    return addPointsInner(innerTx, userId, amount, source, sourceId, description);
   });
 }
 
@@ -66,7 +76,7 @@ export async function getUserBalance(userId: string) {
   return user?.totalPoints ?? 0;
 }
 
-export async function getPointLogs(userId: string, limit = 50) {
+export async function getPointLogs(userId: string, limit = DEFAULT_POINT_LOG_LIMIT) {
   return prisma.pointLog.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },

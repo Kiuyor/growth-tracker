@@ -2,6 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { TaskForm } from "@/components/task/task-form";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "编辑任务 | 成长追踪",
+  description: "修改任务详情",
+};
 
 export default async function EditTaskPage({
   params,

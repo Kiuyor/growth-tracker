@@ -38,7 +38,7 @@ const statusMap: Record<
 
 export function TaskCard({ task, onComplete, onDelete }: TaskCardProps) {
   const router = useRouter();
-  const StatusIcon = statusMap[task.status].icon;
+  const StatusIcon = statusMap[task.status]?.icon ?? Circle;
 
   return (
     <Card className={task.status === "DONE" ? "opacity-75" : ""}>
@@ -52,8 +52,8 @@ export function TaskCard({ task, onComplete, onDelete }: TaskCardProps) {
             />
             <CardTitle className="text-base">{task.title}</CardTitle>
           </div>
-          <Badge className={priorityMap[task.priority].color}>
-            {priorityMap[task.priority].label}
+          <Badge className={priorityMap[task.priority]?.color ?? "bg-gray-100 text-gray-800"}>
+            {priorityMap[task.priority]?.label ?? task.priority}
           </Badge>
         </div>
       </CardHeader>

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,8 +58,8 @@ export function TaskForm({ initialData }: TaskFormProps) {
       router.push("/tasks");
       router.refresh();
     } catch (err) {
-      console.error(err);
-      alert("保存失败，请重试");
+      logger.error("Failed to save task", err);
+      toast.error("保存失败，请重试");
     } finally {
       setIsSubmitting(false);
     }

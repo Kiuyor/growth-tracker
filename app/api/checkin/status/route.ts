@@ -1,16 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, subDays } from "date-fns";
+import { withAuth } from "@/lib/api/with-auth";
 
 // GET /api/checkin/status
-export async function GET() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.userId;
+export const GET = withAuth(async (userId) => {
   const today = startOfDay(new Date());
 
   const todayCheck = await prisma.dailyCheck.findUnique({
@@ -33,4 +27,4 @@ export async function GET() {
     currentStreak,
     today: today.toISOString(),
   });
-}
+});

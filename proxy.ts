@@ -1,23 +1,17 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/(main)(.*)", "/api/(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, redirectToSignIn } = await auth();
-  const pathname = req.nextUrl.pathname;
 
-  // 公开路由
-  if (
-    pathname.startsWith("/sign-in") ||
-    pathname.startsWith("/sign-up") ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api/webhooks") ||
-    pathname === "/"
-  ) {
-    return;
-  }
-
-  if (!userId && isProtectedRoute(req)) {
+  if (!userId && isProtectedRoute(req) && !isPublicRoute(req)) {
     return redirectToSignIn({ returnBackUrl: req.url });
   }
 });

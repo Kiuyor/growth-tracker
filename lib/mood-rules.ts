@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { startOfDay, subDays, isSameDay } from "date-fns";
+import type { PrismaClient } from "@prisma/client";
 
 export const MOOD_ENTRY_POINTS = 3;
 export const MOOD_STREAK_BONUS = 10;
@@ -20,8 +21,13 @@ export function tagsToArray(tags: string): string[] {
     .filter(Boolean);
 }
 
-export async function getMoodStreak(userId: string): Promise<number> {
-  const entries = await prisma.moodEntry.findMany({
+type PrismaLike = PrismaClient | Pick<PrismaClient, "moodEntry" >;
+
+export async function getMoodStreak(
+  userId: string,
+  client: PrismaLike = prisma
+): Promise<number> {
+  const entries = await client.moodEntry.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
@@ -57,12 +63,15 @@ export async function getMoodStreak(userId: string): Promise<number> {
   return streak;
 }
 
-export async function hasMoodEntryToday(userId: string): Promise<boolean> {
+export async function hasMoodEntryToday(
+  userId: string,
+  client: PrismaLike = prisma
+): Promise<boolean> {
   const today = startOfDay(new Date());
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const count = await prisma.moodEntry.count({
+  const count = await client.moodEntry.count({
     where: {
       userId,
       createdAt: {
@@ -86,6 +95,8 @@ export function calcMoodPoints(
       : 0;
   return { base, streak };
 }
+
+export const MOOD_EMOJIS = ["😫", "😟", "😐", "🙂", "😄"];
 
 export function getMoodLabel(score: number): string {
   const labels: Record<number, string> = {

@@ -1,9 +1,22 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dayKey } from "@/lib/date";
 import { StatsClient } from "./stats-client";
-import { subDays, startOfDay, format } from "date-fns";
+import { subDays, startOfDay } from "date-fns";
 import type { OverviewStats, HeatmapData } from "@/types";
+import { buildDailyBuckets, type RawDailyRecord } from "@/lib/aggregations";
+import {
+  buildTaskStatusCounts,
+  buildTaskPriorityCounts,
+  buildTaskCategoryCounts,
+} from "@/lib/task-stats";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "数据统计 | 成长追踪",
+  description: "查看任务、打卡、心情和番茄钟的详细统计数据",
+};
 
 export default async function StatsPage() {
   const session = await auth();
@@ -17,7 +30,9 @@ export default async function StatsPage() {
     dailyChecks,
     pomodoros,
     moodEntries,
-    allTasks,
+    taskStatusGroups,
+    priorityGroups,
+    categoryGroups,
     completedTasks,
     pointLogs,
     heatmapRecords,
@@ -38,9 +53,20 @@ export default async function StatsPage() {
       where: { userId, createdAt: { gte: startDate } },
       select: { createdAt: true, moodScore: true },
     }),
-    prisma.task.findMany({
+    prisma.task.groupBy({
+      by: ["status"],
       where: { userId },
-      select: { status: true, priority: true, category: true },
+      _count: { status: true },
+    }),
+    prisma.task.groupBy({
+      by: ["priority"],
+      where: { userId },
+      _count: { priority: true },
+    }),
+    prisma.task.groupBy({
+      by: ["category"],
+      where: { userId, category: { not: null } },
+      _count: { category: true },
     }),
     prisma.task.findMany({
       where: { userId, status: "DONE", updatedAt: { gte: startDate } },
@@ -57,91 +83,31 @@ export default async function StatsPage() {
     }),
   ]);
 
-  const dailyMap = new Map<
-    string,
-    {
-      checkIn: boolean;
-      pomodoroCount: number;
-      pomodoroMinutes: number;
-      moodScores: number[];
-      tasksCompleted: number;
-      pointsEarned: number;
-    }
-  >();
+  const records: RawDailyRecord[] = [
+    ...dailyChecks.map((c) => ({ date: c.date, checkIn: true })),
+    ...pomodoros.map((p) => ({
+      date: p.startedAt,
+      pomodoroCount: 1,
+      pomodoroMinutes: p.duration,
+    })),
+    ...moodEntries.map((e) => ({ date: e.createdAt, moodScore: e.moodScore })),
+    ...completedTasks.map((t) => ({ date: t.updatedAt, tasksCompleted: 1 })),
+    ...pointLogs.map((p) => ({ date: p.createdAt, pointsEarned: p.amount })),
+  ];
 
-  for (let i = 0; i < 7; i++) {
-    const d = subDays(todayStart, 6 - i);
-    dailyMap.set(format(d, "yyyy-MM-dd"), {
-      checkIn: false,
-      pomodoroCount: 0,
-      pomodoroMinutes: 0,
-      moodScores: [],
-      tasksCompleted: 0,
-      pointsEarned: 0,
-    });
-  }
+  const daily = buildDailyBuckets(startDate, todayStart, records);
 
-  dailyChecks.forEach((c) => {
-    const key = format(c.date, "yyyy-MM-dd");
-    const day = dailyMap.get(key);
-    if (day) day.checkIn = true;
-  });
+  const taskStatusCounts = buildTaskStatusCounts(
+    taskStatusGroups as { status: string; _count: { status: number } }[]
+  );
 
-  pomodoros.forEach((p) => {
-    const key = format(p.startedAt, "yyyy-MM-dd");
-    const day = dailyMap.get(key);
-    if (day) {
-      day.pomodoroCount += 1;
-      day.pomodoroMinutes += p.duration;
-    }
-  });
+  const byPriority = buildTaskPriorityCounts(
+    priorityGroups as { priority: string; _count: { priority: number } }[]
+  );
 
-  moodEntries.forEach((e) => {
-    const key = format(e.createdAt, "yyyy-MM-dd");
-    const day = dailyMap.get(key);
-    if (day) day.moodScores.push(e.moodScore);
-  });
-
-  completedTasks.forEach((t) => {
-    const key = format(t.updatedAt, "yyyy-MM-dd");
-    const day = dailyMap.get(key);
-    if (day) day.tasksCompleted += 1;
-  });
-
-  pointLogs.forEach((p) => {
-    const key = format(p.createdAt, "yyyy-MM-dd");
-    const day = dailyMap.get(key);
-    if (day) day.pointsEarned += p.amount;
-  });
-
-  const daily = Array.from(dailyMap.entries()).map(([date, val]) => ({
-    date,
-    checkIn: val.checkIn,
-    pomodoroCount: val.pomodoroCount,
-    pomodoroMinutes: val.pomodoroMinutes,
-    moodScore:
-      val.moodScores.length > 0
-        ? Number(
-            (val.moodScores.reduce((a, b) => a + b, 0) / val.moodScores.length).toFixed(1)
-          )
-        : null,
-    tasksCompleted: val.tasksCompleted,
-    pointsEarned: val.pointsEarned,
-  }));
-
-  const taskStatusCounts = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
-  const priorityMap = new Map<string, number>();
-  const categoryMap = new Map<string, number>();
-
-  allTasks.forEach((t) => {
-    if (t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "DONE") {
-      taskStatusCounts[t.status] += 1;
-    }
-    priorityMap.set(t.priority, (priorityMap.get(t.priority) || 0) + 1);
-    if (t.category) {
-      categoryMap.set(t.category, (categoryMap.get(t.category) || 0) + 1);
-    }
-  });
+  const byCategory = buildTaskCategoryCounts(
+    categoryGroups as { category: string | null; _count: { category: number } }[]
+  );
 
   const hourMap = new Map<number, number>();
   for (let i = 0; i < 24; i++) hourMap.set(i, 0);
@@ -158,21 +124,15 @@ export default async function StatsPage() {
   const overview: OverviewStats = {
     daily,
     tasks: {
-      total: allTasks.length,
+      total: taskStatusCounts.total,
       completed: taskStatusCounts.DONE,
       inProgress: taskStatusCounts.IN_PROGRESS,
       todo: taskStatusCounts.TODO,
-      byPriority: Array.from(priorityMap.entries()).map(([priority, count]) => ({
-        priority,
-        count,
-      })),
-      byCategory: Array.from(categoryMap.entries()).map(([category, count]) => ({
-        category,
-        count,
-      })),
+      byPriority,
+      byCategory,
     },
     pointsBySource: Array.from(pointsSourceMap.entries()).map(([source, amount]) => ({
-      source,
+      source: source as import("@/types").PointSource,
       amount,
     })),
     pomodoroByHour: Array.from(hourMap.entries()).map(([hour, count]) => ({
@@ -191,13 +151,13 @@ export default async function StatsPage() {
 
   const recordMap = new Map<string, number>();
   heatmapRecords.forEach((r) => {
-    const key = r.date.toISOString().split("T")[0];
+    const key = dayKey(r.date);
     recordMap.set(key, r.streak);
   });
 
   const current = new Date(yearStart);
   while (current <= yearEnd) {
-    const key = current.toISOString().split("T")[0];
+    const key = dayKey(current);
     heatmapData.data.push({
       date: key,
       value: recordMap.has(key) ? 1 : 0,

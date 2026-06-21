@@ -1,20 +1,20 @@
 import { auth } from "@clerk/nextjs/server";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  CheckCircle2,
-  Flame,
-  ListTodo,
-  Trophy,
-  Timer,
-  Smile,
-} from "lucide-react";
 import Link from "next/link";
-import { startOfDay, subDays, startOfWeek, endOfWeek } from "date-fns";
-import { WeeklyTrendChart } from "@/components/charts/weekly-trend-chart";
-import { TaskStatusPie } from "@/components/charts/task-status-pie";
+import { startOfDay, subDays } from "date-fns";
+import { buildDailyBuckets, type RawDailyRecord } from "@/lib/aggregations";
+import { mapTask } from "@/lib/mappers";
+import { StatCards } from "./dashboard/components/stat-cards";
+import { WeeklyChartSection } from "./dashboard/components/weekly-chart-section";
+import { RecentTasks } from "./dashboard/components/recent-tasks";
+
+export const metadata: Metadata = {
+  title: "仪表盘 | 成长追踪",
+  description: "查看你的成长数据概览，包括任务、打卡、心情和番茄钟统计",
+};
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -22,48 +22,38 @@ export default async function DashboardPage() {
 
   const userId = session.userId;
   const today = startOfDay(new Date());
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
 
   const [
     profile,
     totalTasks,
     pendingTasks,
     completedTasks,
+    inProgressTasks,
     todayCheck,
     yesterdayCheck,
-    totalCheckIns,
     todayPomodoroCount,
     todayPomodoroMinutes,
     todayMood,
     weeklyPomodoros,
     weeklyMoods,
-    allTasks,
+    recentTasks,
   ] = await Promise.all([
     prisma.userProfile.findUnique({ where: { clerkId: userId } }),
     prisma.task.count({ where: { userId } }),
     prisma.task.count({ where: { userId, status: { not: "DONE" } } }),
     prisma.task.count({ where: { userId, status: "DONE" } }),
+    prisma.task.count({ where: { userId, status: "IN_PROGRESS" } }),
     prisma.dailyCheck.findUnique({
       where: { userId_date: { userId, date: today } },
     }),
     prisma.dailyCheck.findUnique({
       where: { userId_date: { userId, date: subDays(today, 1) } },
     }),
-    prisma.dailyCheck.count({ where: { userId } }),
     prisma.pomodoro.count({
-      where: {
-        userId,
-        startedAt: { gte: today },
-        endedAt: { not: null },
-      },
+      where: { userId, startedAt: { gte: today }, endedAt: { not: null } },
     }),
     prisma.pomodoro.aggregate({
-      where: {
-        userId,
-        startedAt: { gte: today },
-        endedAt: { not: null },
-      },
+      where: { userId, startedAt: { gte: today }, endedAt: { not: null } },
       _sum: { duration: true },
     }),
     prisma.moodEntry.findFirst({
@@ -84,7 +74,9 @@ export default async function DashboardPage() {
     }),
     prisma.task.findMany({
       where: { userId },
-      select: { status: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { subtasks: true },
     }),
   ]);
 
@@ -94,74 +86,22 @@ export default async function DashboardPage() {
     ? yesterdayCheck.streak
     : 0;
 
-  // 构建近 7 天每日数据
-  const dailyMap = new Map<
-    string,
-    {
-      checkIn: boolean;
-      pomodoroCount: number;
-      pomodoroMinutes: number;
-      moodScores: number[];
-      tasksCompleted: number;
-      pointsEarned: number;
-    }
-  >();
+  const rawRecords: RawDailyRecord[] = [
+    ...weeklyPomodoros.map((p) => ({
+      date: p.startedAt,
+      pomodoroCount: 1,
+      pomodoroMinutes: p.duration,
+    })),
+    ...weeklyMoods.map((e) => ({ date: e.createdAt, moodScore: e.moodScore })),
+  ];
 
-  for (let i = 0; i < 7; i++) {
-    const d = subDays(today, 6 - i);
-    dailyMap.set(d.toISOString().split("T")[0], {
-      checkIn: false,
-      pomodoroCount: 0,
-      pomodoroMinutes: 0,
-      moodScores: [],
-      tasksCompleted: 0,
-      pointsEarned: 0,
-    });
-  }
+  const weeklyDaily = buildDailyBuckets(subDays(today, 6), today, rawRecords);
 
-  weeklyPomodoros.forEach((p) => {
-    const key = p.startedAt.toISOString().split("T")[0];
-    const day = dailyMap.get(key);
-    if (day) {
-      day.pomodoroCount += 1;
-      day.pomodoroMinutes += p.duration;
-    }
-  });
-
-  weeklyMoods.forEach((e) => {
-    const key = e.createdAt.toISOString().split("T")[0];
-    const day = dailyMap.get(key);
-    if (day) day.moodScores.push(e.moodScore);
-  });
-
-  const weeklyDaily = Array.from(dailyMap.entries()).map(([date, val]) => ({
-    date,
-    checkIn: val.checkIn,
-    pomodoroCount: val.pomodoroCount,
-    pomodoroMinutes: val.pomodoroMinutes,
-    moodScore:
-      val.moodScores.length > 0
-        ? Number(
-            (val.moodScores.reduce((a, b) => a + b, 0) / val.moodScores.length).toFixed(1)
-          )
-        : null,
-    tasksCompleted: val.tasksCompleted,
-    pointsEarned: val.pointsEarned,
-  }));
-
-  const taskStatusCounts = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
-  allTasks.forEach((t) => {
-    if (t.status === "TODO" || t.status === "IN_PROGRESS" || t.status === "DONE") {
-      taskStatusCounts[t.status] += 1;
-    }
-  });
-
-  const recentTasks = await prisma.task.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-    include: { subtasks: true },
-  });
+  const taskStatusCounts = {
+    TODO: pendingTasks - inProgressTasks,
+    IN_PROGRESS: inProgressTasks,
+    DONE: completedTasks,
+  };
 
   return (
     <div className="flex h-full flex-col gap-3 md:gap-4">
@@ -172,158 +112,23 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              总积分
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold text-amber-600 dark:text-amber-400">
-              <Trophy className="h-4 w-4" />
-              {profile?.totalPoints || 0}
-            </div>
-          </CardContent>
-        </Card>
+      <StatCards
+        totalPoints={profile?.totalPoints || 0}
+        streak={streak}
+        todayCheck={!!todayCheck}
+        totalTasks={totalTasks}
+        completedTasks={completedTasks}
+        todayPomodoroCount={todayPomodoroCount}
+        todayPomodoroMinutes={todayPomodoroMinutes._sum.duration || 0}
+        todayMood={todayMood}
+      />
 
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              连续打卡
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold text-orange-600 dark:text-orange-400">
-              <Flame className="h-4 w-4" />
-              {streak} 天
-            </div>
-            <Link href="/checkin">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
-                {todayCheck ? "查看" : "打卡"}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+      <WeeklyChartSection
+        weeklyDaily={weeklyDaily}
+        taskStatusCounts={taskStatusCounts}
+      />
 
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              总任务
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold">
-              <ListTodo className="h-4 w-4" />
-              {totalTasks}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              已完成
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold text-green-600 dark:text-green-400">
-              <CheckCircle2 className="h-4 w-4" />
-              {completedTasks}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              今日专注
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold text-blue-600 dark:text-blue-400">
-              <Timer className="h-4 w-4" />
-              {todayPomodoroCount} / {todayPomodoroMinutes._sum.duration || 0}m
-            </div>
-            <Link href="/pomodoro">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
-                专注
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="h-[72px]">
-          <CardHeader className="p-3 pb-1">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              今日心情
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between p-3 pt-0">
-            <div className="flex items-center gap-2 text-lg font-bold text-pink-600 dark:text-pink-400">
-              <Smile className="h-4 w-4" />
-              {todayMood ? `${todayMood.moodScore}/5` : "未记录"}
-            </div>
-            <Link href="/mood">
-              <Button variant="link" size="sm" className="h-auto px-0 py-0 text-xs">
-                {todayMood ? "查看" : "记录"}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
-        <div className="h-full min-h-0 lg:col-span-2">
-          <WeeklyTrendChart data={weeklyDaily} />
-        </div>
-        <div className="h-full min-h-0">
-          <TaskStatusPie
-            todo={taskStatusCounts.TODO}
-            inProgress={taskStatusCounts.IN_PROGRESS}
-            completed={taskStatusCounts.DONE}
-          />
-        </div>
-      </div>
-
-      <Card className="flex shrink-0 flex-col overflow-hidden md:h-[200px]">
-        <CardHeader className="shrink-0 p-3 pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm md:text-base">最近任务</CardTitle>
-            <Link href="/tasks">
-              <Button variant="outline" size="sm" className="h-7 text-xs">查看全部</Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="min-h-0 flex-1 overflow-y-auto p-3 pt-0 scrollbar-thin">
-          {recentTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">还没有任务，去创建一个吧！</p>
-          ) : (
-            <ul className="space-y-2">
-              {recentTasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="flex items-center justify-between rounded-lg border p-2 md:p-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        task.status === "DONE" ? "bg-green-500" : "bg-amber-500"
-                      }`}
-                    />
-                    <span className={`text-sm ${task.status === "DONE" ? "line-through" : ""}`}>
-                      {task.title}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground md:text-sm">
-                    {task.status === "DONE" ? "已完成" : "待完成"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <RecentTasks tasks={recentTasks.map(mapTask)} />
     </div>
   );
 }

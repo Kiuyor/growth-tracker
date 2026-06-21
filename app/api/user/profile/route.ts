@@ -1,18 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/api/with-auth";
 
-export async function GET() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (userId) => {
   const profile = await prisma.userProfile.upsert({
-    where: { clerkId: session.userId },
+    where: { clerkId: userId },
     update: {},
-    create: { clerkId: session.userId },
+    create: { clerkId: userId },
   });
 
   return NextResponse.json(profile);
-}
+});

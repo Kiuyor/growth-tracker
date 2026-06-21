@@ -7,7 +7,6 @@ import {
   endOfYear,
   eachDayOfInterval,
   getDay,
-  subDays,
 } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { HeatmapData } from "@/types";

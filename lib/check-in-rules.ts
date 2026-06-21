@@ -1,4 +1,6 @@
-export const CHECK_IN_BASE_POINTS = 5;
+import { CHECK_IN_BASE_POINTS } from "@/lib/constants";
+
+export { CHECK_IN_BASE_POINTS };
 
 export interface MilestoneRule {
   days: number;

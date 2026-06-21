@@ -1,16 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, startOfWeek, endOfWeek, subDays, format } from "date-fns";
+import { withAuth } from "@/lib/api/with-auth";
 
 // GET /api/pomodoro/stats
-export async function GET() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.userId;
+export const GET = withAuth(async (userId) => {
   const now = new Date();
   const todayStart = startOfDay(now);
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -79,4 +73,4 @@ export async function GET() {
     totalCount: totalResult || 0,
     dailyLast7Days,
   });
-}
+});

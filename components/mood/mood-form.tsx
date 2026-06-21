@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +37,7 @@ export function MoodForm({ todayRecorded, onSuccess }: MoodFormProps) {
       };
 
       if (!res.ok) {
-        window.alert(data.error || "记录失败");
+        toast.error(data.error || "记录失败");
         return;
       }
 
@@ -46,12 +47,14 @@ export function MoodForm({ todayRecorded, onSuccess }: MoodFormProps) {
               data.streak > 0 ? `，当前连续 ${data.streak} 天` : ""
             }`
           : "记录成功！";
-      window.alert(msg);
+      toast.success(msg);
 
       setContent("");
       setMoodScore(0);
       setTags([]);
       onSuccess();
+    } catch {
+      toast.error("网络错误，请稍后重试");
     } finally {
       setLoading(false);
     }

@@ -4,7 +4,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { tagsToArray, getMoodLabel } from "@/lib/mood-rules";
+import { tagsToArray, getMoodLabel, MOOD_EMOJIS } from "@/lib/mood-rules";
 import type { MoodEntry } from "@/types";
 
 interface MoodTimelineProps {
@@ -44,8 +44,6 @@ export function MoodTimeline({ entries }: MoodTimelineProps) {
     }
   });
 
-  const MOOD_EMOJIS = ["😫", "😟", "😐", "🙂", "😄"];
-
   return (
     <Card>
       <CardHeader>
@@ -59,7 +57,7 @@ export function MoodTimeline({ entries }: MoodTimelineProps) {
             </h4>
             <div className="space-y-3">
               {group.items.map((entry) => {
-                const tagList = tagsToArray(entry.tags);
+                const tagList = entry.tags;
                 return (
                   <div
                     key={entry.id}

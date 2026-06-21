@@ -3,10 +3,15 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PointsMallSection } from "@/components/shop/points-mall-section";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "积分明细 | 成长追踪",
+  description: "查看积分收支明细，了解积分来源与去向",
+};
 
 export default async function PointsPage() {
   const session = await auth();

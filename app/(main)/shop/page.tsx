@@ -5,18 +5,32 @@ import { ShopItemGrid } from "@/components/shop/shop-item-grid";
 import { Button } from "@/components/ui/button";
 import { Backpack } from "lucide-react";
 import Link from "next/link";
+import type { ShopItem } from "@/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "积分商城 | 成长追踪",
+  description: "用积分兑换奖励商品，让成长更有动力",
+};
 
 export default async function ShopPage() {
   const session = await auth();
   if (!session.userId) redirect("/sign-in");
 
-  const [profile, items] = await Promise.all([
+  const [profile, rawItems] = await Promise.all([
     prisma.userProfile.findUnique({ where: { clerkId: session.userId } }),
     prisma.shopItem.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
   ]);
+
+  const items: ShopItem[] = rawItems.map((i) => ({
+    ...i,
+    type: i.type as ShopItem["type"],
+    createdAt: i.createdAt.toISOString(),
+    updatedAt: i.updatedAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-6">
@@ -41,7 +55,7 @@ export default async function ShopPage() {
       </div>
 
       <ShopItemGrid
-        items={items as unknown as import("@/types").ShopItem[]}
+        items={items}
         balance={profile?.totalPoints || 0}
       />
     </div>

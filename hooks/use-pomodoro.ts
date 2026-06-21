@@ -1,25 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { Pomodoro, PomodoroStats, TimerMode } from "@/types";
-
-interface StartParams {
-  duration: number;
-  taskId?: string;
-  mode: TimerMode;
-}
+import { useCallback, useState } from "react";
+import type { Pomodoro, PomodoroStats } from "@/types";
+import {
+  fetchPomodoroHistory,
+  fetchPomodoroStats,
+  startPomodoro,
+  completePomodoro,
+  abortPomodoro,
+  type StartPomodoroParams,
+  type CompletePomodoroParams,
+} from "@/lib/pomodoro-api";
 
 interface UsePomodoroReturn {
   activeId: string | null;
   history: Pomodoro[];
   stats: PomodoroStats | null;
   loading: boolean;
-  start: (params: StartParams) => Promise<string>;
-  complete: (params: {
-    id: string;
-    actualMinutes: number;
-    completeTask?: boolean;
-  }) => Promise<{ points: number; taskCompleted: boolean }>;
+  start: (params: StartPomodoroParams) => Promise<string>;
+  complete: (params: CompletePomodoroParams) => Promise<{
+    points: number;
+    taskCompleted: boolean;
+  }>;
   abort: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -30,111 +32,61 @@ export function usePomodoro(): UsePomodoroReturn {
   const [stats, setStats] = useState<PomodoroStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchHistory = useCallback(async () => {
-    const res = await fetch("/api/pomodoro?limit=20");
-    if (res.ok) {
-      const data = (await res.json()) as Pomodoro[];
-      setHistory(data);
-    }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    const res = await fetch("/api/pomodoro/stats");
-    if (res.ok) {
-      const data = (await res.json()) as PomodoroStats;
-      setStats(data);
-    }
-  }, []);
-
   const refresh = useCallback(async () => {
-    await Promise.all([fetchHistory(), fetchStats()]);
-  }, [fetchHistory, fetchStats]);
+    const [h, s] = await Promise.all([
+      fetchPomodoroHistory(),
+      fetchPomodoroStats(),
+    ]);
+    setHistory(h);
+    setStats(s);
+  }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const start = useCallback(async (params: StartParams) => {
+  const start = useCallback(async (params: StartPomodoroParams) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/pomodoro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
-      });
-      const data = (await res.json()) as Pomodoro & { mode: TimerMode };
-      if (!res.ok) {
-        throw new Error((data as unknown as { error?: string }).error || "Failed to start");
-      }
-      setActiveId(data.id);
-      return data.id;
+      const id = await startPomodoro(params);
+      setActiveId(id);
+      return id;
     } finally {
       setLoading(false);
     }
   }, []);
 
   const complete = useCallback(
-    async ({
-      id,
-      actualMinutes,
-      completeTask,
-    }: {
-      id: string;
-      actualMinutes: number;
-      completeTask?: boolean;
-    }) => {
+    async (params: CompletePomodoroParams) => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/pomodoro/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "COMPLETE", actualMinutes, completeTask }),
-        });
-        const data = (await res.json()) as {
-          pomodoro: Pomodoro;
-          points: { log: { amount: number } } | null;
-          taskCompleted: boolean;
-        };
-        if (!res.ok) {
-          throw new Error(
-            (data as unknown as { error?: string }).error || "Failed to complete"
-          );
-        }
+        const result = await completePomodoro(params);
         setActiveId(null);
-        setHistory((prev) => [data.pomodoro, ...prev.filter((p) => p.id !== data.pomodoro.id)]);
-        await fetchStats();
-        return {
-          points: data.points?.log?.amount || 0,
-          taskCompleted: data.taskCompleted,
-        };
+        const [h, s] = await Promise.all([
+          fetchPomodoroHistory(),
+          fetchPomodoroStats(),
+        ]);
+        setHistory(h);
+        setStats(s);
+        return result;
       } finally {
         setLoading(false);
       }
     },
-    [fetchStats]
+    []
   );
 
   const abort = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/pomodoro/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ABORT", actualMinutes: 0 }),
-      });
-      const data = (await res.json()) as { pomodoro: Pomodoro };
-      if (!res.ok) {
-        throw new Error(
-          (data as unknown as { error?: string }).error || "Failed to abort"
-        );
-      }
+      await abortPomodoro(id);
       setActiveId(null);
-      setHistory((prev) => [data.pomodoro, ...prev.filter((p) => p.id !== data.pomodoro.id)]);
-      await fetchStats();
+      const [h, s] = await Promise.all([
+        fetchPomodoroHistory(),
+        fetchPomodoroStats(),
+      ]);
+      setHistory(h);
+      setStats(s);
     } finally {
       setLoading(false);
     }
-  }, [fetchStats]);
+  }, []);
 
   return {
     activeId,

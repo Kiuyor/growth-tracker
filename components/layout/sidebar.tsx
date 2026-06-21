@@ -33,9 +33,63 @@ const navItems = [
   { href: "/points", label: "积分", icon: Coins },
 ];
 
+function NavList({
+  pathname,
+  onNavigate,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              active
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted"
+    >
+      {theme === "dark" ? (
+        <>
+          <Sun className="h-4 w-4" />
+          切换浅色模式
+        </>
+      ) : (
+        <>
+          <Moon className="h-4 w-4" />
+          切换深色模式
+        </>
+      )}
+    </button>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
-  const { theme, setTheme } = useTheme();
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-card md:flex">
@@ -45,43 +99,10 @@ export function Sidebar() {
         </Link>
       </div>
       <nav className="flex-1 space-y-1 p-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+        <NavList pathname={pathname} />
       </nav>
       <div className="border-t p-4">
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted"
-        >
-          {theme === "dark" ? (
-            <>
-              <Sun className="h-4 w-4" />
-              切换浅色模式
-            </>
-          ) : (
-            <>
-              <Moon className="h-4 w-4" />
-              切换深色模式
-            </>
-          )}
-        </button>
+        <ThemeToggle />
       </div>
     </aside>
   );
@@ -90,7 +111,6 @@ export function Sidebar() {
 export function MobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
 
   return (
     <>
@@ -105,42 +125,8 @@ export function MobileNav() {
       {open && (
         <div className="border-b bg-card md:hidden">
           <nav className="space-y-1 p-4">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted"
-            >
-              {theme === "dark" ? (
-                <>
-                  <Sun className="h-4 w-4" />
-                  切换浅色模式
-                </>
-              ) : (
-                <>
-                  <Moon className="h-4 w-4" />
-                  切换深色模式
-                </>
-              )}
-            </button>
+            <NavList pathname={pathname} onNavigate={() => setOpen(false)} />
+            <ThemeToggle />
           </nav>
         </div>
       )}

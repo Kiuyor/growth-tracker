@@ -1,18 +1,18 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { dayKey } from "@/lib/date";
 import type { HeatmapData } from "@/types";
+import { withAuth } from "@/lib/api/with-auth";
 
 // GET /api/stats/heatmap?year=2026
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.userId;
+export const GET = withAuth(async (userId, request) => {
   const { searchParams } = new URL(request.url);
-  const year = Number(searchParams.get("year") || new Date().getFullYear());
+  const yearParam = searchParams.get("year");
+  const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return NextResponse.json({ error: "Invalid year" }, { status: 400 });
+  }
 
   const start = new Date(year, 0, 1);
   const end = new Date(year, 11, 31, 23, 59, 59, 999);
@@ -28,14 +28,14 @@ export async function GET(request: Request) {
 
   const recordMap = new Map<string, number>();
   records.forEach((r) => {
-    const key = r.date.toISOString().split("T")[0];
+    const key = dayKey(r.date);
     recordMap.set(key, r.streak);
   });
 
   const data: HeatmapData["data"] = [];
   const current = new Date(start);
   while (current <= end) {
-    const key = current.toISOString().split("T")[0];
+    const key = dayKey(current);
     data.push({
       date: key,
       value: recordMap.has(key) ? 1 : 0,
@@ -46,4 +46,4 @@ export async function GET(request: Request) {
 
   const result: HeatmapData = { year, data };
   return NextResponse.json(result);
-}
+});

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { ShopItem } from "@/types";
 import { ShopItemCard } from "./shop-item-card";
 import { PurchaseModal } from "./purchase-modal";
 import { Button } from "@/components/ui/button";
-import { shopItemTypeLabel } from "@/lib/shop-rules";
 
 interface ShopItemGridProps {
   items: ShopItem[];
@@ -31,22 +31,26 @@ export function ShopItemGrid({ items, balance }: ShopItemGridProps) {
       : items.filter((item) => item.type === activeTab);
 
   async function handlePurchase(item: ShopItem) {
-    const res = await fetch("/api/shop/purchase", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shopItemId: item.id }),
-    });
+    try {
+      const res = await fetch("/api/shop/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopItemId: item.id }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert(data.error || "兑换失败");
-      return;
+      if (!res.ok) {
+        toast.error(data.error || "兑换失败");
+        return;
+      }
+
+      toast.success(`兑换成功！当前余额：${data.balance} 积分`);
+      setSelectedItem(null);
+      router.refresh();
+    } catch {
+      toast.error("网络错误，请稍后重试");
     }
-
-    alert(`兑换成功！当前余额：${data.balance} 积分`);
-    setSelectedItem(null);
-    router.refresh();
   }
 
   return (

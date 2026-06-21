@@ -1,10 +1,18 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dayKey } from "@/lib/date";
+import type { Metadata } from "next";
 import { CheckInCard } from "@/components/checkin/check-in-card";
 import { CheckInHeatmap } from "@/components/checkin/check-in-heatmap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { startOfDay, subDays } from "date-fns";
+import type { DailyCheck } from "@/types";
+
+export const metadata: Metadata = {
+  title: "每日打卡 | 成长追踪",
+  description: "坚持每日打卡，积累连续天数，获取额外积分奖励",
+};
 
 export default async function CheckInPage() {
   const session = await auth();
@@ -42,6 +50,11 @@ export default async function CheckInPage() {
     where: { userId },
   });
 
+  const dailyHistory: DailyCheck[] = history.map((h) => ({
+    ...h,
+    date: dayKey(h.date),
+  }));
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">每日打卡</h2>
@@ -78,7 +91,7 @@ export default async function CheckInPage() {
       />
 
       <Card className="p-6">
-        <CheckInHeatmap history={history as unknown as import("@/types").DailyCheck[]} />
+        <CheckInHeatmap history={dailyHistory} />
       </Card>
     </div>
   );

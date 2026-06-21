@@ -1,15 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getMoodLabel } from "@/lib/mood-rules";
+import { getMoodLabel, MOOD_EMOJIS } from "@/lib/mood-rules";
 
 interface MoodScorePickerProps {
   value: number;
   onChange: (value: number) => void;
   disabled?: boolean;
 }
-
-const MOOD_EMOJIS = ["😫", "😟", "😐", "🙂", "😄"];
 
 export function MoodScorePicker({
   value,

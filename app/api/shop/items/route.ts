@@ -1,18 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/api/with-auth";
 
 // GET /api/shop/items
-export async function GET() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async () => {
   const items = await prisma.shopItem.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
   });
 
   return NextResponse.json(items);
-}
+});

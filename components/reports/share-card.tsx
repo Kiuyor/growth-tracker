@@ -67,7 +67,7 @@ export function ShareCard({ data }: ShareCardProps) {
           <TrendingUp className="h-3 w-3" />
           本周寄语
         </div>
-        <p className="text-sm font-medium leading-relaxed">"{quote}"</p>
+        <p className="text-sm font-medium leading-relaxed">&ldquo;{quote}&rdquo;</p>
       </div>
 
       <div className="mb-5 grid grid-cols-3 gap-3">
@@ -107,7 +107,7 @@ export function ShareCard({ data }: ShareCardProps) {
           <p>记录每一步进步</p>
         </div>
         <div className="text-right text-xs text-white/70">
-          growth-tracker.vercel.app
+          {process.env.NEXT_PUBLIC_APP_URL || "growth-tracker.vercel.app"}
         </div>
       </div>
     </div>

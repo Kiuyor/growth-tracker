@@ -25,7 +25,7 @@ export function useTimer({
 }: UseTimerOptions): UseTimerReturn {
   const [state, setState] = useState<TimerState>("idle");
   const [remainingSeconds, setRemainingSeconds] = useState(initialSeconds);
-  const totalSecondsRef = useRef(initialSeconds);
+  const [totalSeconds, setTotalSeconds] = useState(initialSeconds);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastTickRef = useRef<number>(0);
   const targetEndRef = useRef<number>(0);
@@ -37,6 +37,23 @@ export function useTimer({
     }
   }, []);
 
+  const tick = useCallback(() => {
+    const now = Date.now();
+    if (mode === "COUNTDOWN") {
+      const diff = Math.ceil((targetEndRef.current - now) / 1000);
+      const next = Math.max(0, diff);
+      setRemainingSeconds(next);
+      if (next <= 0) {
+        clearTimer();
+        setState("idle");
+      }
+    } else {
+      const diff = Math.floor((now - targetEndRef.current) / 1000);
+      setRemainingSeconds(diff);
+    }
+    lastTickRef.current = now;
+  }, [clearTimer, mode]);
+
   const start = useCallback(() => {
     clearTimer();
     setState("running");
@@ -46,25 +63,11 @@ export function useTimer({
       targetEndRef.current = now + remainingSeconds * 1000;
     } else {
       targetEndRef.current = now - remainingSeconds * 1000;
+      setTotalSeconds(remainingSeconds);
     }
 
-    intervalRef.current = setInterval(() => {
-      const now = Date.now();
-      if (mode === "COUNTDOWN") {
-        const diff = Math.ceil((targetEndRef.current - now) / 1000);
-        const next = Math.max(0, diff);
-        setRemainingSeconds(next);
-        if (next <= 0) {
-          clearTimer();
-          setState("idle");
-        }
-      } else {
-        const diff = Math.floor((now - targetEndRef.current) / 1000);
-        setRemainingSeconds(diff);
-      }
-      lastTickRef.current = now;
-    }, 1000);
-  }, [clearTimer, mode, remainingSeconds]);
+    intervalRef.current = setInterval(tick, 1000);
+  }, [clearTimer, mode, remainingSeconds, tick]);
 
   const pause = useCallback(() => {
     clearTimer();
@@ -81,29 +84,14 @@ export function useTimer({
       targetEndRef.current = now - remainingSeconds * 1000;
     }
 
-    intervalRef.current = setInterval(() => {
-      const now = Date.now();
-      if (mode === "COUNTDOWN") {
-        const diff = Math.ceil((targetEndRef.current - now) / 1000);
-        const next = Math.max(0, diff);
-        setRemainingSeconds(next);
-        if (next <= 0) {
-          clearTimer();
-          setState("idle");
-        }
-      } else {
-        const diff = Math.floor((now - targetEndRef.current) / 1000);
-        setRemainingSeconds(diff);
-      }
-      lastTickRef.current = now;
-    }, 1000);
-  }, [clearTimer, mode, remainingSeconds]);
+    intervalRef.current = setInterval(tick, 1000);
+  }, [clearTimer, mode, remainingSeconds, tick]);
 
   const reset = useCallback(
     (newSeconds?: number) => {
       clearTimer();
       const seconds = newSeconds !== undefined ? newSeconds : initialSeconds;
-      totalSecondsRef.current = seconds;
+      setTotalSeconds(seconds);
       setRemainingSeconds(seconds);
       setState("idle");
     },
@@ -114,27 +102,14 @@ export function useTimer({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden || state !== "running") return;
-      const now = Date.now();
-      if (mode === "COUNTDOWN") {
-        const diff = Math.ceil((targetEndRef.current - now) / 1000);
-        const next = Math.max(0, diff);
-        setRemainingSeconds(next);
-        if (next <= 0) {
-          clearTimer();
-          setState("idle");
-        }
-      } else {
-        const diff = Math.floor((now - targetEndRef.current) / 1000);
-        setRemainingSeconds(diff);
-      }
-      lastTickRef.current = now;
+      tick();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [clearTimer, mode, state]);
+  }, [state, tick]);
 
   useEffect(() => {
     return () => clearTimer();
@@ -142,14 +117,14 @@ export function useTimer({
 
   const elapsedSeconds =
     mode === "COUNTDOWN"
-      ? totalSecondsRef.current - remainingSeconds
+      ? totalSeconds - remainingSeconds
       : remainingSeconds;
   const elapsedMinutes = Math.floor(elapsedSeconds / 60);
 
   return {
     state,
     remainingSeconds,
-    totalSeconds: totalSecondsRef.current,
+    totalSeconds,
     elapsedMinutes,
     start,
     pause,

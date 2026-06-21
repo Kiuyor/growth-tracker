@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { UserItem } from "@/types";
 import {
   Card,
@@ -34,21 +35,25 @@ export function InventoryList({ items }: InventoryListProps) {
   async function handleUse(note: string) {
     if (!selectedItem) return;
 
-    const res = await fetch(`/api/shop/inventory/${selectedItem.id}/use`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note }),
-    });
+    try {
+      const res = await fetch(`/api/shop/inventory/${selectedItem.id}/use`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.error || "使用失败");
-      return;
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "使用失败");
+        return;
+      }
+
+      toast.success("使用成功！");
+      setSelectedItem(null);
+      router.refresh();
+    } catch {
+      toast.error("网络错误，请稍后重试");
     }
-
-    alert("使用成功！");
-    setSelectedItem(null);
-    router.refresh();
   }
 
   if (items.length === 0) {

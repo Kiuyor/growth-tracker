@@ -1,7 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { calcPomodoroPoints } from "@/lib/pomodoro-rules";
 import { PomodoroClient } from "./pomodoro-client";
+import type { Pomodoro, Task } from "@/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "番茄钟 | 成长追踪",
+  description: "使用番茄工作法提升专注力，计时并记录每次专注",
+};
 
 export default async function PomodoroPage() {
   const session = await auth();
@@ -63,7 +71,7 @@ export default async function PomodoroPage() {
     }),
   ]);
 
-  const history = pomodoros.map((p) => ({
+  const history: Pomodoro[] = pomodoros.map((p) => ({
     id: p.id,
     userId: p.userId,
     duration: p.duration,
@@ -71,20 +79,13 @@ export default async function PomodoroPage() {
     startedAt: p.startedAt.toISOString(),
     endedAt: p.endedAt ? p.endedAt.toISOString() : null,
     taskTitle: p.task?.title || null,
-    points:
-      p.duration >= 15
-        ? p.duration >= 60
-          ? 10
-          : p.duration >= 45
-          ? 8
-          : p.duration >= 25
-          ? 5
-          : 3
-        : 0,
+    points: calcPomodoroPoints(p.duration),
   }));
 
-  const initialTasks = tasks.map((t) => ({
+  const initialTasks: Task[] = tasks.map((t) => ({
     ...t,
+    priority: t.priority as Task["priority"],
+    status: t.status as Task["status"],
     deadline: t.deadline ? t.deadline.toISOString() : null,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),

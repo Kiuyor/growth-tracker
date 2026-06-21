@@ -1,22 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addPoints } from "@/lib/points-engine";
 import {
   tagsToString,
+  tagsToArray,
   getMoodStreak,
   hasMoodEntryToday,
   calcMoodPoints,
 } from "@/lib/mood-rules";
 import type { MoodEntry } from "@/types";
+import { withAuth } from "@/lib/api/with-auth";
 
 // POST /api/mood - 创建心情随记
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (userId, request) => {
   const body = await request.json();
   const { content, moodScore, tags } = body as {
     content?: string;
@@ -45,11 +42,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const userId = session.userId;
-
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const firstToday = !(await hasMoodEntryToday(userId));
+      const firstToday = !(await hasMoodEntryToday(userId, tx));
 
       const entry = await tx.moodEntry.create({
         data: {
@@ -60,7 +55,7 @@ export async function POST(request: Request) {
         },
       });
 
-      const streak = await getMoodStreak(userId);
+      const streak = await getMoodStreak(userId, tx);
       const { base, streak: streakBonus } = calcMoodPoints(firstToday, streak);
 
       if (base > 0) {
@@ -70,6 +65,7 @@ export async function POST(request: Request) {
           source: "MOOD_ENTRY",
           sourceId: entry.id,
           description: "心情随记",
+          tx,
         });
       }
 
@@ -80,6 +76,7 @@ export async function POST(request: Request) {
           source: "MOOD_STREAK",
           sourceId: entry.id,
           description: `连续 ${streak} 天心情记录奖励`,
+          tx,
         });
       }
 
@@ -95,45 +92,42 @@ export async function POST(request: Request) {
     return NextResponse.json({
       entry: {
         ...result.entry,
+        tags: tagsToArray(result.entry.tags),
         createdAt: result.entry.createdAt.toISOString(),
-      } as unknown as MoodEntry,
+      } satisfies MoodEntry,
       basePoints: result.basePoints,
       streakBonus: result.streakBonus,
       streak: result.streak,
       totalPoints: result.totalPoints,
     }, { status: 201 });
   } catch (err) {
-    console.error("Mood entry error:", err);
+    logger.error("Mood entry error:", err);
     return NextResponse.json({ error: "记录失败" }, { status: 500 });
   }
-}
+});
 
 // GET /api/mood - 获取历史列表
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (userId, request) => {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 100);
   const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
   const [entries, total] = await Promise.all([
     prisma.moodEntry.findMany({
-      where: { userId: session.userId },
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
     }),
-    prisma.moodEntry.count({ where: { userId: session.userId } }),
+    prisma.moodEntry.count({ where: { userId } }),
   ]);
 
   return NextResponse.json({
     entries: entries.map((e) => ({
       ...e,
+      tags: tagsToArray(e.tags),
       createdAt: e.createdAt.toISOString(),
-    })) as MoodEntry[],
+    })) satisfies MoodEntry[],
     total,
   });
-}
+});

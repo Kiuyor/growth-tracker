@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { startOfWeek, startOfMonth } from "date-fns";
 
 export type ShopItemType = "REWARD" | "DECORATION" | "CONSUMABLE";
 export type LimitPeriod = "WEEKLY" | "MONTHLY" | "TOTAL";
@@ -42,15 +43,11 @@ function getPeriodStart(period: LimitPeriod): Date {
 
   if (period === "WEEKLY") {
     // 本周一 00:00（按中国习惯，周一为一周开始）
-    const day = now.getDay(); // 0=周日, 1=周一
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(now.setDate(diff));
-    monday.setHours(0, 0, 0, 0);
-    return monday;
+    return startOfWeek(now, { weekStartsOn: 1 });
   }
 
   if (period === "MONTHLY") {
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    return startOfMonth(now);
   }
 
   // TOTAL

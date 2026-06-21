@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addPoints } from "@/lib/points-engine";
@@ -7,15 +7,10 @@ import {
   getMilestoneBonus,
 } from "@/lib/check-in-rules";
 import { startOfDay, subDays } from "date-fns";
+import { withAuth } from "@/lib/api/with-auth";
 
 // POST /api/checkin
-export async function POST() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.userId;
+export const POST = withAuth(async (userId) => {
   const today = startOfDay(new Date());
 
   try {
@@ -26,7 +21,7 @@ export async function POST() {
       });
 
       if (existing) {
-        return { error: "今日已打卡", status: 409 };
+        throw new Error("ALREADY_CHECKED_IN");
       }
 
       // 查询昨日记录，计算连续天数
@@ -49,6 +44,7 @@ export async function POST() {
         source: "DAILY_CHECK",
         sourceId: dailyCheck.id,
         description: "每日打卡",
+        tx,
       });
 
       // 里程碑奖励
@@ -60,6 +56,7 @@ export async function POST() {
           source: "STREAK_BONUS",
           sourceId: dailyCheck.id,
           description: `${milestone.label} 连续打卡奖励`,
+          tx,
         });
       }
 
@@ -70,20 +67,16 @@ export async function POST() {
           ? { days: milestone.days, bonus: milestone.bonus, label: milestone.label }
           : null,
         totalPoints: CHECK_IN_BASE_POINTS + (milestone?.bonus || 0),
-        status: 200,
       };
     });
 
-    if (result.error) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: result.status as number }
-      );
-    }
-
     return NextResponse.json(result);
   } catch (err) {
-    console.error("Check-in error:", err);
+    logger.error("Check-in error:", err);
+    const message = err instanceof Error ? err.message : "";
+    if (message === "ALREADY_CHECKED_IN") {
+      return NextResponse.json({ error: "今日已打卡" }, { status: 409 });
+    }
     return NextResponse.json({ error: "打卡失败" }, { status: 500 });
   }
-}
+});

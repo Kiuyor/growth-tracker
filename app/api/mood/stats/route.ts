@@ -1,17 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getMoodStreak, hasMoodEntryToday } from "@/lib/mood-rules";
 import { subDays, startOfDay, format } from "date-fns";
+import { withAuth } from "@/lib/api/with-auth";
 
 // GET /api/mood/stats
-export async function GET() {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.userId;
+export const GET = withAuth(async (userId) => {
   const now = new Date();
   const todayStart = startOfDay(now);
   const weekAgo = subDays(now, 7);
@@ -76,4 +70,4 @@ export async function GET() {
     todayRecorded,
     dailyLast7Days,
   });
-}
+});

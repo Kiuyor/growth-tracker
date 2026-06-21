@@ -29,8 +29,8 @@ export function ShareDialog({ open, onOpenChange, data }: ShareDialogProps) {
 
     setDownloading(true);
     try {
-      // 稍微延迟确保字体和图标渲染完成
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // 等待字体和图标渲染完成
+      await document.fonts.ready;
 
       const dataUrl = await toPng(cardRef.current, {
         pixelRatio: 2,

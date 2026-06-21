@@ -1,17 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/api/with-auth";
 
 // PATCH /api/shop/inventory/[id]/use
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PATCH = withAuth(async (userId, request, { params }) => {
   const { id } = await params;
   const body = await request.json();
   const { note } = body;
@@ -19,16 +12,16 @@ export async function PATCH(
   try {
     const result = await prisma.$transaction(async (tx) => {
       const userItem = await tx.userItem.findFirst({
-        where: { id, userId: session.userId },
+        where: { id, userId },
         include: { shopItem: true },
       });
 
       if (!userItem) {
-        return { error: "物品不存在", status: 404 };
+        throw new Error("ITEM_NOT_FOUND");
       }
 
       if (userItem.status !== "UNUSED") {
-        return { error: "物品状态异常", status: 400 };
+        throw new Error("ITEM_STATUS_INVALID");
       }
 
       const updated = await tx.userItem.update({
@@ -47,16 +40,19 @@ export async function PATCH(
         },
       });
 
-      return { userItem: updated, useLog, status: 200 };
+      return { userItem: updated, useLog };
     });
-
-    if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
-    }
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error("Use item error:", err);
+    logger.error("Use item error:", err);
+    const message = err instanceof Error ? err.message : "";
+    if (message === "ITEM_NOT_FOUND") {
+      return NextResponse.json({ error: "物品不存在" }, { status: 404 });
+    }
+    if (message === "ITEM_STATUS_INVALID") {
+      return NextResponse.json({ error: "物品状态异常" }, { status: 400 });
+    }
     return NextResponse.json({ error: "使用失败" }, { status: 500 });
   }
-}
+});

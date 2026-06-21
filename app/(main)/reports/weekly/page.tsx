@@ -1,7 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { buildReportStats } from "@/lib/reports";
 import { ReportClient } from "../report-client";
+
+export const metadata: Metadata = {
+  title: "周报 | 成长追踪",
+  description: "查看你的每周成长报告，了解专注时长、任务完成和心情趋势",
+};
 
 export default async function WeeklyReportPage({
   searchParams,

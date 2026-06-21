@@ -1,17 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { addPoints } from "@/lib/points-engine";
 import { calcPomodoroPoints } from "@/lib/pomodoro-rules";
 import type { TimerMode } from "@/types";
+import { withAuth } from "@/lib/api/with-auth";
 
 // POST /api/pomodoro - 开始一个番茄钟
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (userId, request) => {
   const body = await request.json();
   const { duration, taskId, mode } = body as {
     duration?: number;
@@ -26,43 +21,49 @@ export async function POST(request: Request) {
     );
   }
 
-  if (taskId) {
-    const task = await prisma.task.findFirst({
-      where: { id: taskId, userId: session.userId },
+  try {
+    const pomodoro = await prisma.$transaction(async (tx) => {
+      if (taskId) {
+        const task = await tx.task.findFirst({
+          where: { id: taskId, userId },
+        });
+        if (!task) {
+          throw new Error("TASK_NOT_FOUND");
+        }
+      }
+
+      return tx.pomodoro.create({
+        data: {
+          userId,
+          duration,
+          taskId: taskId || null,
+          startedAt: new Date(),
+        },
+      });
     });
-    if (!task) {
+
+    return NextResponse.json({
+      ...pomodoro,
+      mode: mode || "COUNTDOWN",
+    }, { status: 201 });
+  } catch (err) {
+    logger.error("Pomodoro start error:", err);
+    const message = err instanceof Error ? err.message : "";
+    if (message === "TASK_NOT_FOUND") {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
+    return NextResponse.json({ error: "创建失败" }, { status: 500 });
   }
-
-  const pomodoro = await prisma.pomodoro.create({
-    data: {
-      userId: session.userId,
-      duration,
-      taskId: taskId || null,
-      startedAt: new Date(),
-    },
-  });
-
-  return NextResponse.json({
-    ...pomodoro,
-    mode: mode || "COUNTDOWN",
-  }, { status: 201 });
-}
+});
 
 // GET /api/pomodoro - 获取历史列表
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session.userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (userId, request) => {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 100);
   const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
 
   const pomodoros = await prisma.pomodoro.findMany({
-    where: { userId: session.userId, endedAt: { not: null } },
+    where: { userId, endedAt: { not: null } },
     orderBy: { startedAt: "desc" },
     take: limit,
     skip: offset,
@@ -81,4 +82,4 @@ export async function GET(request: Request) {
   }));
 
   return NextResponse.json(mapped);
-}
+});
